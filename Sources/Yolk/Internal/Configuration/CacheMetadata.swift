@@ -6,6 +6,32 @@
 //
 
 import Foundation
+import CoreGraphics
+
+/// 비디오 메타데이터 (내부용)
+///
+/// 비디오의 해상도, 종횡비, 길이 정보를 담고 있습니다.
+/// UserDefaults에 Codable로 저장되어 빠른 조회를 제공합니다.
+internal struct VideoMetadata: Codable, Sendable {
+    /// 비디오 너비 (픽셀, 회전 보정 적용)
+    let width: CGFloat
+
+    /// 비디오 높이 (픽셀, 회전 보정 적용)
+    let height: CGFloat
+
+    /// 종횡비 (width / height)
+    let aspectRatio: CGFloat
+
+    /// 비디오 길이 (초)
+    let durationSeconds: Double
+
+    init(width: CGFloat, height: CGFloat, durationSeconds: Double) {
+        self.width = width
+        self.height = height
+        self.aspectRatio = height > 0 ? width / height : 1.0
+        self.durationSeconds = durationSeconds
+    }
+}
 
 /// 캐시 파일의 메타데이터를 관리하는 모델
 ///
@@ -52,6 +78,13 @@ internal struct CacheMetadata: Codable {
     /// 정리 정책을 적용하기 위해 사용됩니다.
     let type: CacheType
 
+    /// 비디오 메타데이터 (optional)
+    ///
+    /// 비디오 파일의 경우 메타데이터(해상도, 길이 등)를 저장합니다.
+    /// 이미지 파일 등 비디오가 아닌 경우 nil입니다.
+    /// 하위 호환성을 위해 optional로 선언되었습니다.
+    var videoMetadata: VideoMetadata?
+
     /// 캐시 파일의 타입을 나타내는 열거형
     ///
     /// 각 타입별로 다른 용량 제한과 정리 정책을 적용할 수 있습니다.
@@ -69,7 +102,7 @@ internal struct CacheMetadata: Codable {
         case generic
     }
 
-    /// CacheMetadata 초기화
+    /// CacheMetadata 초기화 (기존 버전, 하위 호환성 유지)
     ///
     /// 새로운 캐시 메타데이터를 생성합니다.
     /// 생성 시간과 마지막 접근 시간은 자동으로 현재 시간으로 설정됩니다.
@@ -86,6 +119,33 @@ internal struct CacheMetadata: Codable {
         self.createdAt = Date()
         self.lastAccessedAt = Date()
         self.type = type
+        self.videoMetadata = nil
+    }
+
+    /// CacheMetadata 초기화 (VideoMetadata 포함)
+    ///
+    /// 비디오 메타데이터를 포함한 캐시 메타데이터를 생성합니다.
+    ///
+    /// - Parameters:
+    ///   - key: 캐시 파일의 고유 키
+    ///   - originalURL: 원본 URL (문자열)
+    ///   - size: 파일 크기 (바이트)
+    ///   - type: 캐시 파일 타입
+    ///   - videoMetadata: 비디오 메타데이터 (optional)
+    init(
+        key: String,
+        originalURL: String,
+        size: Int64,
+        type: CacheType,
+        videoMetadata: VideoMetadata?
+    ) {
+        self.key = key
+        self.originalURL = originalURL
+        self.size = size
+        self.createdAt = Date()
+        self.lastAccessedAt = Date()
+        self.type = type
+        self.videoMetadata = videoMetadata
     }
 
     /// 마지막 접근 시간을 현재 시간으로 업데이트합니다.

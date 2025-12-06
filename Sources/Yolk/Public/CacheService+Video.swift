@@ -169,4 +169,63 @@ extension CacheService {
     public func getCachedVideo(for url: URL) async -> URL? {
         return await cacheManager.getCachedFileURL(from: url)
     }
+
+    /// 캐시된 비디오의 메타데이터를 가져옵니다.
+    ///
+    /// 비디오를 다운로드하지 않고 캐시된 메타데이터만 조회합니다.
+    /// 메타데이터가 없으면 nil을 반환합니다.
+    ///
+    /// - Parameter url: 비디오의 원본 URL
+    /// - Returns: VideoMetadataPublic (없으면 nil)
+    ///
+    /// # Example
+    /// ```swift
+    /// if let metadata = await CacheService.video.getVideoMetadata(for: videoURL) {
+    ///     let aspectRatio = metadata.aspectRatio
+    ///     videoView.aspectRatio(aspectRatio, contentMode: .fit)
+    /// }
+    /// ```
+    public func getVideoMetadata(for url: URL) async -> VideoMetadataPublic? {
+        let key = cacheManager.cacheKey(from: url)
+        guard let metadata = await cacheManager.metadataManager.getVideoMetadata(for: key) else {
+            return nil
+        }
+        return VideoMetadataPublic(from: metadata)
+    }
+
+    /// 비디오 메타데이터를 즉시 추출하여 반환합니다.
+    ///
+    /// 캐시된 메타데이터가 있으면 반환하고, 없으면 비디오를 다운로드하여
+    /// 메타데이터를 추출합니다. 이 메서드는 메타데이터를 캐시에 저장합니다.
+    ///
+    /// - Parameters:
+    ///   - url: 비디오 URL
+    ///   - modifier: HTTP 요청 modifier
+    /// - Returns: VideoMetadataPublic
+    /// - Throws: 비디오 다운로드 또는 메타데이터 추출 실패 시
+    ///
+    /// # Example
+    /// ```swift
+    /// let metadata = try await CacheService.video.extractVideoMetadata(for: videoURL)
+    /// videoView.aspectRatio(metadata.aspectRatio, contentMode: .fit)
+    /// ```
+    public func extractVideoMetadata(
+        for url: URL,
+        modifier: RequestModifier? = nil
+    ) async throws -> VideoMetadataPublic {
+        // 캐시된 메타데이터 먼저 확인
+        if let cached = await getVideoMetadata(for: url) {
+            return cached
+        }
+
+        // 비디오 다운로드 (자동으로 메타데이터 추출됨)
+        _ = try await getVideoURL(from: url, modifier: modifier)
+
+        // 추출된 메타데이터 반환
+        guard let metadata = await getVideoMetadata(for: url) else {
+            throw VideoCacheError.metadataExtractionFailed
+        }
+
+        return metadata
+    }
 }

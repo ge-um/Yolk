@@ -44,6 +44,11 @@ public enum VideoCacheError: LocalizedError {
     /// 요청한 동영상이 캐시에 존재하지 않는 경우 발생합니다.
     case cacheNotFound
 
+    /// 메타데이터 추출 실패
+    ///
+    /// 동영상 메타데이터(해상도, 길이 등) 추출에 실패한 경우 발생합니다.
+    case metadataExtractionFailed
+
     /// 사용자에게 표시될 에러 메시지
     public var errorDescription: String? {
         switch self {
@@ -59,6 +64,8 @@ public enum VideoCacheError: LocalizedError {
             return "잘못된 URL입니다"
         case .cacheNotFound:
             return "캐시된 동영상을 찾을 수 없습니다"
+        case .metadataExtractionFailed:
+            return "비디오 메타데이터 추출에 실패했습니다"
         }
     }
 }

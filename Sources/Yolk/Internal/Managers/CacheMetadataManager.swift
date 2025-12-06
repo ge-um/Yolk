@@ -92,6 +92,28 @@ internal actor CacheMetadataManager {
             .reduce(0) { $0 + $1.size }
     }
 
+    /// 비디오 메타데이터 업데이트
+    ///
+    /// 기존 CacheMetadata에 VideoMetadata를 추가합니다.
+    ///
+    /// - Parameters:
+    ///   - key: 캐시 키
+    ///   - metadata: 비디오 메타데이터
+    func updateVideoMetadata(for key: String, metadata: VideoMetadata) {
+        guard var data = self.metadata[key] else { return }
+        data.videoMetadata = metadata
+        self.metadata[key] = data
+        save()
+    }
+
+    /// 비디오 메타데이터 조회
+    ///
+    /// - Parameter key: 캐시 키
+    /// - Returns: 비디오 메타데이터 (없으면 nil)
+    func getVideoMetadata(for key: String) -> VideoMetadata? {
+        return metadata[key]?.videoMetadata
+    }
+
     /// 모든 메타데이터 삭제
     func removeAll() {
         metadata.removeAll()

@@ -41,6 +41,12 @@ extension CacheManager {
             throw VideoCacheError.cacheNotFound
         }
 
+        // 메타데이터 자동 추출 (백그라운드)
+        let key = cacheKey(from: url)
+        Task(priority: .utility) {
+            await extractAndCacheMetadata(for: localURL, cacheKey: key)
+        }
+
         return localURL
     }
 
@@ -158,5 +164,22 @@ extension CacheManager {
         let thumbnailKey = "\(url.absoluteString)_thumbnail_\(time)"
         let thumbnailURL = URL(string: thumbnailKey)!
         return await getCachedFileURL(from: thumbnailURL) != nil
+    }
+
+    /// 비디오 메타데이터를 추출하여 캐시에 저장합니다.
+    ///
+    /// 백그라운드에서 실행되며, 실패해도 비디오 재생에 영향을 주지 않습니다.
+    ///
+    /// - Parameters:
+    ///   - url: 로컬 비디오 파일 URL
+    ///   - cacheKey: 캐시 키
+    private func extractAndCacheMetadata(for url: URL, cacheKey: String) async {
+        do {
+            let metadata = try await VideoMetadataExtractor.extract(from: url)
+            await metadataManager.updateVideoMetadata(for: cacheKey, metadata: metadata)
+        } catch {
+            // 무시 - 비치명적 에러
+            // 다음번 조회 시 다시 시도
+        }
     }
 }
